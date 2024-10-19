@@ -47,18 +47,26 @@ func run(ctx context.Context) error {
 }
 
 func stressLoadBot(ctx context.Context, client *telegram.Client) error {
-	go loopGetDifference(ctx, client, 1)
-	go loopGetDifference(ctx, client, 2)
-	go loopGetDifference(ctx, client, 3)
-	go loopGetDifference(ctx, client, 4)
-	go loopGetDifference(ctx, client, 5)
-	<-ctx.Done()
-	return nil
+	countChan := make(chan int)
+	count := 0
+	for i := 1; i <= 15; i++ {
+		go loopGetDifference(ctx, client, i, countChan)
+	}
+	for {
+		select {
+		case <-countChan:
+			count += 1
+			if count%100 == 0 {
+				fmt.Println("Workers made", count, "requests")
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
-func loopGetDifference(ctx context.Context, client *telegram.Client, workerID int) {
+func loopGetDifference(ctx context.Context, client *telegram.Client, workerID int, count chan int) {
 	differenceRequest := &tg.UpdatesGetDifferenceRequest{Pts: 1, Qts: 1, Date: 1}
-	count := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -69,10 +77,7 @@ func loopGetDifference(ctx context.Context, client *telegram.Client, workerID in
 				fmt.Println("Error in worker", workerID, "while getting difference: ", err)
 				continue
 			}
-			count += 1
-			if count%100 == 0 {
-				fmt.Println("Worker", workerID, "made", count, "requests")
-			}
+			count <- 1
 		}
 	}
 }
