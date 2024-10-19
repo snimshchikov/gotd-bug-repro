@@ -12,3 +12,4 @@ Required environment variables:
 1. Run `go run .` in this directory
 2. Wait
 3. After ~2000 requests, connection will be closed
+4. Read logs from debug.log file
